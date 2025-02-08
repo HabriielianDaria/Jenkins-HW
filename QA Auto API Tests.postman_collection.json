@@ -1,0 +1,814 @@
+{
+	"info": {
+		"_postman_id": "032adf94-167f-40a7-83bf-be187de21ec9",
+		"name": "QA Auto API Tests",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "27561271"
+	},
+	"item": [
+		{
+			"name": "One request for all",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const bodyList = [\r",
+							"    { firstName: \"\", lastName: \"Test\", email: \"test@example.com\", \r",
+							"    expected:{status:400, message: '\"name\" is not allowed to be empty'} },    \r",
+							"    { firstName: \"A\", lastName: \"Test\", email: \"test@example.com\", \r",
+							"    expected:{status:400, message: 'Name has to be from 2 to 20 characters long'} },   \r",
+							"    { firstName: \"1234\", lastName: \"Test\", email: \"test@example.com\", \r",
+							"    expected:{status:400, message: 'Name is invalid'} }, \r",
+							"    { firstName: \"Test\", lastName: \"\", email: \"test@example.com\",\r",
+							"    expected:{status:400, message: '\"lastName\" is not allowed to be empty'} },\r",
+							"    { firstName: \"Test\", lastName: \"T\", email: \"test@example.com\",\r",
+							"    expected:{status:400, message: 'Last Name has to be from 2 to 20 characters long'} },\r",
+							"    { firstName: \"Test\", lastName: \"12345\", email: \"test@example.com\",\r",
+							"    expected:{status:400, message: 'Last Name is invalid'} },\r",
+							"];\r",
+							"\r",
+							"pm.environment.set(\"bodyList\", JSON.stringify(bodyList));\r",
+							"\r",
+							"let iter = pm.environment.get(\"authIteration\") || 0;\r",
+							"let bodyListFromEnv = JSON.parse(pm.environment.get(\"bodyList\"));\r",
+							"\r",
+							"// Перевірка на завершення тестів\r",
+							"if (iter < bodyListFromEnv.length) {\r",
+							"    let currentTestData = bodyListFromEnv[iter];\r",
+							"    \r",
+							"    pm.environment.set(\"firstName\", currentTestData.firstName);\r",
+							"    pm.environment.set(\"lastName\", currentTestData.lastName);\r",
+							"    pm.environment.set(\"email\", currentTestData.email);\r",
+							"\r",
+							"    pm.environment.set(\"authIteration\", iter + 1);\r",
+							"    pm.execution.setNextRequest(\"One request for all\");  // Продовжуємо перевірку\r",
+							"} else {\r",
+							"    // Перевірки завершено, переходить до наступного запиту\r",
+							"    pm.environment.set(\"authIteration\", 0);  // Скидаємо ітерацію для наступного запуску\r",
+							"    pm.execution.setNextRequest(\"Create User\");  // Завершуємо перевірки\r",
+							"    console.log(\"Перевірки завершено, запускається знову.\");\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let response = pm.response;\r",
+							"\r",
+							"function checkValidationError(field, expectedMessage) {\r",
+							"    pm.test(`${field} validation error`, function () {\r",
+							"        pm.expect(response.status).to.equal(400); \r",
+							"        pm.expect(response.json().message).to.include(expectedMessage);\r",
+							"    });\r",
+							"}\r",
+							"\r",
+							"const firstName = pm.environment.get(\"firstName\");\r",
+							"const lastName = pm.environment.get(\"lastName\");\r",
+							"\r",
+							"// Перевірка для firstName\r",
+							"if (firstName === \"\") {\r",
+							"    checkValidationError('First Name', '\"name\" is not allowed to be empty');\r",
+							"} else if (firstName.length < 2 || firstName.length > 20) {\r",
+							"    checkValidationError('First Name', 'Name has to be from 2 to 20 characters long');\r",
+							"} else if (!/^[a-zA-Z]+$/.test(firstName)) {\r",
+							"    checkValidationError('First Name', 'Name is invalid');\r",
+							"}\r",
+							"\r",
+							"// Перевірка для lastName\r",
+							"if (lastName === \"\") {\r",
+							"    checkValidationError('Last Name', '\"lastName\" is not allowed to be empty');\r",
+							"} else if (lastName.length < 2 || lastName.length > 20) {\r",
+							"    checkValidationError('Last Name', 'Last Name has to be from 2 to 20 characters long');\r",
+							"} else if (!/^[a-zA-Z]+$/.test(lastName)) { \r",
+							"    checkValidationError('Last Name', 'Last Name is invalid');\r",
+							"}\r",
+							"\r",
+							"// Перевірка завершення тестів і перехід до наступного запиту\r",
+							"const iter = parseInt(pm.environment.get(\"authIteration\"));\r",
+							"const bodyListFromEnv = JSON.parse(pm.environment.get(\"bodyList\"));\r",
+							"\r",
+							"// Перевірка, чи всі перевірки завершено\r",
+							"if (iter >= bodyListFromEnv.length) {\r",
+							"    // Очищення змінних тільки після завершення всіх перевірок\r",
+							"    pm.environment.unset(\"authIteration\");\r",
+							"    pm.environment.unset(\"bodyList\");\r",
+							"    pm.environment.unset(\"firstName\");\r",
+							"    pm.environment.unset(\"lastName\");\r",
+							"    pm.environment.unset(\"email\");\r",
+							"    pm.execution.setNextRequest(\"Create User\");\r",
+							"} else {\r",
+							"    pm.execution.setNextRequest(\"One request for all\");  // Продовжуємо перевірки\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"{{firstName}}\",\n  \"lastName\": \"{{lastName}}\",\n  \"email\": \"{{email}}\",\n  \"password\": \"Password123\",\n  \"repeatPassword\": \"Password123\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/auth/signup",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"auth",
+						"signup"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create User",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Генерація випадкових даних для унікальності (ім'я, прізвище, електронна пошта)",
+							"const randomInt = Math.floor(Math.random() * 90000) + 10000;",
+							"const firstName = `User`;",
+							"const lastName = `Test`;",
+							"const email = `user${randomInt}@example.com`;",
+							"",
+							"// Збереження в енві",
+							"pm.environment.set(\"firstName\", firstName);",
+							"pm.environment.set(\"lastName\", lastName);",
+							"pm.environment.set(\"email\", email);",
+							"pm.environment.set(\"randomInt\", randomInt);"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Перевірка статусу відповіді\r",
+							"pm.test(\"Status is 201\", function () {\r",
+							"    pm.response.to.have.status(201);\r",
+							"});\r",
+							"\r",
+							"var responseJson = pm.response.json();  // Отримуємо JSON-відповідь\r",
+							"\r",
+							"// Перевірка, що користувач був успішно створений та збереження userId\r",
+							"pm.test(\"User created successfully\", function () {\r",
+							"    try {\r",
+							"        \r",
+							"        // Перевірка, чи є поле userId у відповіді\r",
+							"        pm.expect(responseJson).to.have.property('userId');\r",
+							"        \r",
+							"        // Зберігаємо userId в середовище Postman для подальших запитів\r",
+							"        pm.environment.set(\"userId\", responseJson.userId);\r",
+							"    } catch (e) {\r",
+							"        console.log(\"Error in response parsing or userId extraction:\", e);\r",
+							"    }\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"{{firstName}}\",\n  \"lastName\": \"{{lastName}}\",\n  \"email\": \"{{email}}\",\n  \"password\": \"Password123\",\n  \"repeatPassword\": \"Password123\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/auth/signup",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"auth",
+						"signup"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update user profile",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Генерація нових випадкових даних для профілю\r",
+							"const randomInt = Math.floor(Math.random() * 90000) + 10000;\r",
+							"const updatedFirstName = `UpdatedUser`;\r",
+							"const updatedLastName = `UpdatedTest`;\r",
+							"const updatedEmail = `updateduser${randomInt}@example.com`;\r",
+							"\r",
+							"const currentDate = new Date(); \r",
+							"const formattedDate = currentDate.toISOString(); \r",
+							"\r",
+							"pm.environment.set(\"updatedFirstName\", updatedFirstName);\r",
+							"pm.environment.set(\"updatedLastName\", updatedLastName);\r",
+							"pm.environment.set(\"updatedEmail\", updatedEmail);\r",
+							"pm.environment.set(\"currentDate\", formattedDate);\r",
+							"pm.environment.set(\"randomInt\", randomInt);\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Перевірка статусу відповіді\r",
+							"pm.test(\"Status is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"var responseJson = pm.response.json(); // Отримуємо JSON-відповідь\r",
+							"\r",
+							"// Перевірка, що відповідь містить ті ж самі значення, які були надіслані в запиті\r",
+							"pm.test(\"Response matches the request data\", function () {\r",
+							"    try {\r",
+							"        // Перевірка і порівняння значень\r",
+							"        pm.expect(responseJson.firstName).to.eql(pm.environment.get(\"firstName\"));\r",
+							"        pm.expect(responseJson.lastName).to.eql(pm.environment.get(\"lastName\"));\r",
+							"        pm.expect(responseJson.email).to.eql(pm.environment.get(\"email\"));\r",
+							"\r",
+							"        // Перевірка дати народження\r",
+							"        var expectedDateOfBirth = pm.environment.get(\"dateBirth\");\r",
+							"        if (responseJson.dateBirth) {\r",
+							"            pm.expect(responseJson.dateBirth).to.eql(expectedDateOfBirth);\r",
+							"        } else {\r",
+							"            console.log(\"Date of birth is not present in the response.\");\r",
+							"        }\r",
+							"\r",
+							"    } catch (e) {\r",
+							"        console.log(\"Error in response parsing or comparison: \", e);\r",
+							"    }\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"{{updatedFirstName}}\",\n  \"lastName\": \"{{updatedLastName}}\",\n  \"email\": \"{{updatedEmail}}\",    \n  \"dateBirth\": \"2024-04-06T15:21:05.000Z\",\n  \"country\": \"Ukraine\",\n  \"photo\": \"newphotoprofile.png\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/users/profile",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"users",
+						"profile"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update user password",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Перевірка статусу відповіді\r",
+							"pm.test(\"Status is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"var responseJson = pm.response.json();\r",
+							"\r",
+							"// Перевірка, що userId у відповіді збігається з тим, що було збережено при створенні користувача\r",
+							"pm.test(\"UserId matches the created userId\", function () {\r",
+							"    try { \r",
+							"        // Перевірка наявності userId у відповіді\r",
+							"        var userIdFromResponse = responseJson.userId;\r",
+							"\r",
+							"        // Перевірка на наявність userId у відповіді\r",
+							"        pm.expect(userIdFromResponse, 'userId is missing from response').to.exist;\r",
+							"\r",
+							"        // Отримуємо збережений userId\r",
+							"        var storedUserId = pm.environment.get(\"userId\");\r",
+							"\r",
+							"        // Перевіряємо, що userId з відповіді збігається з тим, що збережено\r",
+							"        pm.expect(userIdFromResponse).to.eql(storedUserId, `userId does not match the created userId. Expected: ${storedUserId}, Found: ${userIdFromResponse}`);\r",
+							"\r",
+							"    } catch (e) {\r",
+							"        // Логування помилки\r",
+							"        console.log(\"Error in response parsing or userId extraction:\", e);\r",
+							"    }\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"oldPassword\": \"Password123\",\n  \"password\": \"NewPassword123\",\n  \"repeatPassword\": \"NewPassword123\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/users/password",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"users",
+						"password"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Logout",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Перевірка статусу відповіді\r",
+							"pm.test(\"Status is 200 for logout\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"var responseJson = pm.response.json();\r",
+							"\r",
+							"pm.test(\"Response should contain status: ok\", function () {\r",
+							"    pm.expect(responseJson.status).to.eql(\"ok\", \"Response status does not match 'ok'\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{authToken}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/auth/logout",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"auth",
+						"logout"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Перевірка статусу відповіді\r",
+							"pm.test(\"Status is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{authToken}}",
+						"type": "text"
+					},
+					{
+						"key": "userId",
+						"value": "{{userId}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"NewPassword123\",\n  \"remember\": false\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/auth/signin",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"auth",
+						"signin"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Add Car",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Генеруємо випадковий carId для створення нового автомобіля\r",
+							"var carId = Math.floor(Math.random() * 1000); // Генерація випадкового carId\r",
+							"pm.environment.set(\"carId\", carId);  // Збереження в середовищі\r",
+							"\r",
+							"// Логування для перевірки\r",
+							"console.log(\"Generated Car ID:\", carId);\r",
+							"\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"/// Перевірка статусу відповіді\r",
+							"pm.test(\"Status is 200\", function () {\r",
+							"    pm.response.to.have.status(201);\r",
+							"});\r",
+							"\r",
+							"// Отримуємо відповідь у форматі JSON\r",
+							"var responseJson = pm.response.json();\r",
+							"\r",
+							"// Оновлюємо carId в середовищі з реального id, отриманого від API\r",
+							"if (responseJson.status === \"ok\" && responseJson.data && responseJson.data.id) {\r",
+							"    var realCarId = responseJson.data.id;\r",
+							"    pm.environment.set(\"carId\", realCarId);  // Оновлюємо carId в середовищі\r",
+							"    console.log(\"Car ID set to environment:\", realCarId);\r",
+							"} else {\r",
+							"    console.log(\"Car creation failed, no valid ID in response\");\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"carBrandId\": 1,\n  \"carModelId\": 1,\n  \"mileage\": 122\n}\n\n\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/cars",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"cars"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Car expenses",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Перевірка статусу відповіді\r",
+							"pm.test(\"Status is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Отримуємо carId з середовища\r",
+							"var carId = pm.environment.get(\"carId\");\r",
+							"\r",
+							"pm.test(\"Check if carId is present\", function () {\r",
+							"    pm.expect(carId).to.not.be.undefined;\r",
+							"    pm.expect(carId).to.be.a(\"number\");\r",
+							"});\r",
+							"\r",
+							"// Отримуємо попередні витрати та пробіг, щоб збільшити їх\r",
+							"var previousMileage = pm.environment.get(\"previousMileage\") || 150;  // Початковий пробіг, якщо немає\r",
+							"var previousTotalCost = pm.environment.get(\"previousTotalCost\") || 707;  // Попередні витрати\r",
+							"\r",
+							"// Збільшуємо пробіг та витрати\r",
+							"var newMileage = previousMileage + Math.floor(Math.random() * 50) + 10;  // Нова більша відстань\r",
+							"var newTotalCost = previousTotalCost + Math.floor(Math.random() * 1000) + 100;  // Нові витрати\r",
+							"\r",
+							"// Оновлюємо значення в середовищі\r",
+							"pm.environment.set(\"previousMileage\", newMileage);\r",
+							"pm.environment.set(\"previousTotalCost\", newTotalCost);\r",
+							"pm.environment.set(\"newExpense\", newTotalCost); // Додаємо нову змінну\r",
+							"var carId = pm.environment.get(\"carId\");\r",
+							"console.log(\"Car ID being used:\", carId);\r",
+							"\r",
+							"console.log(\"New Mileage:\", newMileage);\r",
+							"console.log(\"New Total Cost:\", newTotalCost);\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"carId\": \"{{carId}}\",\n  \"reportedAt\": \"{{currentDate}}\",\n  \"mileage\": 500,\n  \"liters\": 11,\n  \"totalCost\": {{newExpense}},  // Тут вже використовуємо значення змінної\n  \"forceMileage\": false\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/expenses",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"expenses"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Car expenses",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"carId\": \"{{carId}}\",\n  \"reportedAt\": \"{{currentDate}}\",\n  \"mileage\": 500,\n  \"liters\": 11,\n  \"totalCost\": {{newExpense}},\n  \"forceMileage\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/expenses",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"expenses"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Server",
+							"value": "nginx/1.18.0 (Ubuntu)"
+						},
+						{
+							"key": "Date",
+							"value": "Fri, 03 Jan 2025 14:54:43 GMT"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "131"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Vary",
+							"value": "Origin"
+						},
+						{
+							"key": "Access-Control-Allow-Credentials",
+							"value": "true"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"83-ftGI2HUNlzIVukNx02ixTj/VuEE\""
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"status\": \"ok\",\n    \"data\": {\n        \"carId\": \"875\",\n        \"reportedAt\": \"2025-01-03T08:45:53.475Z\",\n        \"liters\": 11,\n        \"id\": 85137,\n        \"mileage\": 500,\n        \"totalCost\": 707\n    }\n}"
+				}
+			]
+		},
+		{
+			"name": "Delete user",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Перевірка статусу відповіді на запит видалення\r",
+							"pm.test(\"Status is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"var responseJson = pm.response.json();\r",
+							"\r",
+							"// Перевірка статусу відповіді для успішного видалення користувача\r",
+							"pm.test(\"User account was successfully deleted\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"    pm.expect(responseJson.status).to.eql(\"ok\");\r",
+							"});\r",
+							"\r",
+							"// Перевірка статусу відповіді для випадку, коли користувач не авторизований (401)\r",
+							"pm.test(\"User is not logged in\", function () {\r",
+							"    if (pm.response.code === 401) {\r",
+							"        pm.expect(responseJson.status).to.eql(\"error\");\r",
+							"        pm.expect(responseJson.message).to.eql(\"User is not logged in\");\r",
+							"    }\r",
+							"});\r",
+							"\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{authToken}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/users",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"users"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
